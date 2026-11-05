@@ -433,3 +433,40 @@ with check (auth.uid() = user_id);
 alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.posts;
 alter publication supabase_realtime add table public.notifications;
+
+-- ==========================================
+-- ZERAVA MEDIA STORAGE
+-- ==========================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'zerava-media',
+  'zerava-media',
+  true,
+  52428800,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'video/mp4',
+    'video/webm'
+  ]
+)
+on conflict (id) do nothing;
+
+create policy "Public can view Zerava media"
+on storage.objects for select
+using (bucket_id = 'zerava-media');
+
+create policy "Authenticated members upload media"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'zerava-media');
+
+create policy "Users delete their own media"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'zerava-media'
+  and owner_id = auth.uid()::text
+);
